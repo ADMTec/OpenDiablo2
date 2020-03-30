@@ -4,10 +4,12 @@ import (
 	"log"
 
 	"github.com/OpenDiablo2/OpenDiablo2/d2common/d2data/d2datadict"
+	"github.com/OpenDiablo2/OpenDiablo2/d2common/d2fileformats/d2dat"
 	"github.com/OpenDiablo2/OpenDiablo2/d2common/d2fileformats/d2mpq"
 
 	"github.com/OpenDiablo2/OpenDiablo2/d2core/d2config"
 	"github.com/OpenDiablo2/OpenDiablo2/d2core/d2term"
+	"github.com/OpenDiablo2/OpenDiablo2/d2common/d2fileformats/d2pl2"
 )
 
 var singleton *assetManager
@@ -16,18 +18,20 @@ func Initialize() error {
 	verifyNotInit()
 
 	var (
-		config           = d2config.Get()
-		archiveManager   = createArchiveManager(config)
-		fileManager      = createFileManager(config, archiveManager)
-		paletteManager   = createPaletteManager()
-		animationManager = createAnimationManager()
-		fontManager      = createFontManager()
+		config					= d2config.Get()
+		archiveManager			= createArchiveManager(config)
+		fileManager				= createFileManager(config, archiveManager)
+		paletteManager			= createPaletteManager()
+		paletteTransformManager	= createPaletteTransformManager()
+		animationManager		= createAnimationManager()
+		fontManager				= createFontManager()
 	)
 
 	singleton = &assetManager{
 		archiveManager,
 		fileManager,
 		paletteManager,
+		paletteTransformManager,
 		animationManager,
 		fontManager,
 	}
@@ -42,6 +46,7 @@ func Initialize() error {
 		archiveManager.cache.SetVerbose(verbose)
 		fileManager.cache.SetVerbose(verbose)
 		paletteManager.cache.SetVerbose(verbose)
+		paletteTransformManager.cache.SetVerbose(verbose)
 		animationManager.cache.SetVerbose(verbose)
 	})
 
@@ -49,6 +54,7 @@ func Initialize() error {
 		d2term.OutputInfo("archive cache: %f", float64(archiveManager.cache.GetWeight())/float64(archiveManager.cache.GetBudget())*100.0)
 		d2term.OutputInfo("file cache: %f", float64(fileManager.cache.GetWeight())/float64(fileManager.cache.GetBudget())*100.0)
 		d2term.OutputInfo("palette cache: %f", float64(paletteManager.cache.GetWeight())/float64(paletteManager.cache.GetBudget())*100.0)
+		d2term.OutputInfo("palette transform cache: %f", float64(paletteTransformManager.cache.GetWeight())/float64(paletteTransformManager.cache.GetBudget())*100.0)
 		d2term.OutputInfo("animation cache: %f", float64(animationManager.cache.GetWeight())/float64(animationManager.cache.GetBudget())*100.0)
 		d2term.OutputInfo("font cache: %f", float64(fontManager.cache.GetWeight())/float64(fontManager.cache.GetBudget())*100.0)
 	})
@@ -57,6 +63,7 @@ func Initialize() error {
 		archiveManager.cache.Clear()
 		fileManager.cache.Clear()
 		paletteManager.cache.Clear()
+		paletteTransformManager.cache.Clear()
 		animationManager.cache.Clear()
 		fontManager.cache.Clear()
 	})
@@ -94,6 +101,11 @@ func LoadAnimation(animationPath, palettePath string) (*Animation, error) {
 	return LoadAnimationWithTransparency(animationPath, palettePath, 255)
 }
 
+func LoadPaletteTransform(pl2Path string) (*d2pl2.PL2File, error) {
+	verifyWasInit()
+	return singleton.paletteTransformManager.loadPaletteTransform(pl2Path)
+}
+
 func LoadAnimationWithTransparency(animationPath, palettePath string, transparency int) (*Animation, error) {
 	verifyWasInit()
 	return singleton.animationManager.loadAnimation(animationPath, palettePath, transparency)
@@ -107,6 +119,11 @@ func LoadComposite(object *d2datadict.ObjectLookupRecord, palettePath string) (*
 func LoadFont(tablePath, spritePath, palettePath string) (*Font, error) {
 	verifyWasInit()
 	return singleton.fontManager.loadFont(tablePath, spritePath, palettePath)
+}
+
+func LoadPalette(palettePath string) (*d2dat.DATPalette, error) {
+	verifyWasInit()
+	return singleton.paletteManager.loadPalette(palettePath)
 }
 
 func verifyWasInit() {
